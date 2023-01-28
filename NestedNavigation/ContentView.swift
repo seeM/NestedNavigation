@@ -12,15 +12,22 @@ struct ContentView: View {
             Folder(name: "Second", contents: [])
         ])
     ])
+    @State private var path: [Folder] = []
+    @State private var selection: Folder.ID?
 
     var body: some View {
-        NavigationStack {
-            // WARNING: Update NavigationRequestObserver tried to update multiple times per frame.
-            ZStack { // Why is this needed to make warning disappear?
-                FolderView(folder: folder)
-                    .navigationDestination(for: Folder.self) { folder2 in
-                        FolderView(folder: folder2)
+        NavigationSplitView {
+            NavigationStack(path: $path) {
+                FolderView(folder: folder, path: $path, selection: $selection)
+                    .navigationDestination(for: Folder.self) { folder in
+                        FolderView(folder: folder, path: $path, selection: $selection)
                     }
+            }
+        } detail: {
+            if let obj = path.last {
+                Text(obj.name)
+            } else {
+                Text("No selection")
             }
         }
     }
@@ -28,11 +35,18 @@ struct ContentView: View {
 
 struct FolderView: View {
     let folder: Folder
-
+    @Binding var path: [Folder]
+    @Binding var selection: Folder.ID?
+    
     var body: some View {
-        List(folder.contents) { folder in
-            NavigationLink(value: folder) {
-                Text(folder.name)
+        List(folder.contents, selection: $selection) { folder in
+            Text(folder.name)
+        }
+        .onChange(of: selection) { selection in
+            if let selection {
+                if let obj = folder.contents.first(where: { $0.id == selection }){
+                    path.append(obj)
+                }
             }
         }
     }
